@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: support-desk
+spec:
+  type: ClusterIP
+  selector: 
+    app: support-desk
+  ports:
+    - port: 80
+      targetPort: 5000
