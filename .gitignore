@@ -221,4 +221,6 @@ __marimo__/
 *.tfstate
 *.tfstate.*
 *.tfvars
+*.tfplan
+tfplan
 crash.log
