@@ -1,0 +1,28 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: support-desk-migrate
+  namespace: {{ .Values.namespace }}
+  annotations:
+    # TODO(human): à quel(s) moment(s) ce Job doit-il tourner ? Indice : avant la 1ère
+    # installation ET avant chaque mise à jour (deux valeurs séparées par une virgule).
+    "helm.sh/hook": "pre-install,pre-upgrade" 
+    # TODO(human): quelle politique de suppression pour éviter de revivre l'incident Phase 3
+    # (Job resté bloqué en Failed, nettoyage manuel nécessaire) ? Indice : on veut que Helm
+    # supprime l'exécution précédente avant d'en créer une nouvelle.
+    "helm.sh/hook-delete-policy": "before-hook-creation"
+spec:
+  backoffLimit: 2
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: migrate
+          image: {{ printf "%s:%s" .Values.image.repository .Values.image.tag }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["python", "migrate.py"]
+          envFrom:
+            - configMapRef:
+                name: support-desk-config
+            - secretRef:
+                name: support-desk-secret
