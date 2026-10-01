@@ -1,13 +1,11 @@
 # kind cluster: 1 control-plane + 2 workers.
 #
 # The control-plane node gets:
-#   - the ingress-ready=true label: the official ingress-nginx manifest for kind
-#     (Phase 3) targets nodes with this label via nodeSelector, and already
-#     tolerates the control-plane's NoSchedule taint.
-#   - hostPort 80 mapped to the container's port 80: traffic reaching the codespace
-#     on port 80 is forwarded into this kind node, where the Ingress controller pod
-#     will be listening (Phase 3).
-# Binding this now avoids recreating the cluster later just for the Ingress.
+#   - hostPort 80 mapped to the node container's port 80, so traffic reaching the host
+#     (or the Codespaces-forwarded port 80) lands on this node.
+#   - the ingress-ready=true label, used to pin the ingress-nginx controller to this node.
+#     Note: the current upstream kind manifest for ingress-nginx does NOT set this
+#     nodeSelector itself, so it must be patched in after install (see README).
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
 name: support-desk

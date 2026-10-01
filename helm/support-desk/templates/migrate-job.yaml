@@ -4,16 +4,16 @@ metadata:
   name: support-desk-migrate
   namespace: {{ .Values.namespace }}
   annotations:
-    # post-install (pas pre-install) : MySQL fait partie du même chart et n'existe pas encore
-    # au moment d'un hook pre-install. pre-upgrade reste correct : MySQL existe déjà à ce stade.
+    # post-install, not pre-install: pre-install hooks run before any non-hook resource of the
+    # release exists, including the in-cluster MySQL and the ConfigMap/Secret this Job reads.
+    # On upgrade those already exist, so pre-upgrade migrates before new Pods roll out.
     "helm.sh/hook": "post-install,pre-upgrade"
-    # before-hook-creation : évite de revivre l'incident Phase 3 (Job resté bloqué en Failed,
-    # nettoyage manuel nécessaire) — Helm supprime l'exécution précédente avant d'en créer une neuve.
+    # Delete the previous run before creating a new one, so a failed Job never blocks the next
+    # install/upgrade (Job specs are immutable).
     "helm.sh/hook-delete-policy": "before-hook-creation"
 spec:
-  # 2 ne laissait pas assez de temps à MySQL pour s'initialiser à froid sur une PVC neuve
-  # (~45s observés). Le backoff de Job est exponentiel (10s, 20s, 40s, 80s...) donc 4 tentatives
-  # couvrent largement ce délai, sans attendre indéfiniment en cas de vraie panne.
+  # MySQL needs ~45s to initialise on a fresh volume. Job retries back off exponentially
+  # (10s, 20s, 40s, 80s), so 4 retries cover that window without waiting forever on a real failure.
   backoffLimit: 4
   template:
     spec:

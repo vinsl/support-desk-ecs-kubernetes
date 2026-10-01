@@ -1,4 +1,5 @@
-# Overlay pour kind. Mots de passe factices, commit autorisé (jamais de vrais secrets ici).
+# Overlay for the local kind cluster. Fake credentials only (same as app/docker-compose.yml);
+# never put real secrets in this file.
 db:
   password: "support_desk_password"
   rootPassword: "local_root_password"

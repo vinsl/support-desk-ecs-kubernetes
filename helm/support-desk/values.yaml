@@ -1,14 +1,14 @@
-# Valeurs par défaut du chart (orientées "local"). values-local.yaml et values-eks.yaml
-# ne surchargent que ce qui diffère.
+# Default values, tuned for the local kind cluster. values-local.yaml and values-eks.yaml
+# only override what differs.
 
-replicaCount: 2
+replicaCount: 2  # parity with the ECS service's desired_count
 
 image:
   repository: support-desk
   tag: dev
-  pullPolicy: Never
+  pullPolicy: Never  # image is side-loaded with `kind load docker-image`, no registry involved
 
-resources:
+resources:  # limits mirror the ECS Fargate task size (256 CPU units / 512 MiB)
   requests:
     cpu: 128m
     memory: 256Mi
@@ -17,30 +17,30 @@ resources:
     memory: 512Mi
 
 probes:
-  path: /health
+  path: /health  # does not touch the database, so it reflects process health only
   port: 5000
   readiness:
     initialDelaySeconds: 10
     periodSeconds: 5
-  liveness:
+  liveness:  # more tolerant than readiness: a slow Pod should stop receiving traffic, not be killed
     initialDelaySeconds: 100
     periodSeconds: 25
 
 db:
-  host: mysql          # écrasé par l'endpoint RDS sur EKS
+  host: mysql            # in-cluster headless Service; would be the RDS endpoint on EKS
   port: "3306"
   name: support_desk
   user: support_desk
-  password: ""          # jamais en dur ici : values-local.yaml (fake) ou --set à l'install (EKS, outputs Terraform)
-  rootPassword: ""       # utilisé seulement si mysql.enabled=true
+  password: ""           # never set here: values-local.yaml (fake) or --set at install time
+  rootPassword: ""       # only used when mysql.enabled=true
 
 mysql:
-  enabled: true          # false sur EKS : RDS externe utilisé à la place
+  enabled: true          # set to false when using an external database (RDS)
   image: "mysql:8.4"
   storage: 1Gi
 
 ingress:
-  className: nginx       # "alb" sur EKS
+  className: nginx
   annotations: {}
 
 namespace: support-desk
