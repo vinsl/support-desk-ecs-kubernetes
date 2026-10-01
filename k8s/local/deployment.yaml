@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: support-desk
+  namespace: support-desk
 spec:
   replicas: 2
   selector:

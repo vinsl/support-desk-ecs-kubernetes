@@ -2,6 +2,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: support-desk
+  namespace: support-desk
 spec:
   type: ClusterIP
   selector: 
