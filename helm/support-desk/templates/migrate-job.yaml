@@ -4,15 +4,18 @@ metadata:
   name: support-desk-migrate
   namespace: {{ .Values.namespace }}
   annotations:
-    # TODO(human): à quel(s) moment(s) ce Job doit-il tourner ? Indice : avant la 1ère
-    # installation ET avant chaque mise à jour (deux valeurs séparées par une virgule).
-    "helm.sh/hook": "pre-install,pre-upgrade" 
+    # post-install (pas pre-install) : MySQL fait partie du même chart et n'existe pas encore
+    # au moment d'un hook pre-install. pre-upgrade reste correct : MySQL existe déjà à ce stade.
+    "helm.sh/hook": "post-install,pre-upgrade"
     # TODO(human): quelle politique de suppression pour éviter de revivre l'incident Phase 3
     # (Job resté bloqué en Failed, nettoyage manuel nécessaire) ? Indice : on veut que Helm
     # supprime l'exécution précédente avant d'en créer une nouvelle.
     "helm.sh/hook-delete-policy": "before-hook-creation"
 spec:
-  backoffLimit: 2
+  # 2 ne laissait pas assez de temps à MySQL pour s'initialiser à froid sur une PVC neuve
+  # (~45s observés). Le backoff de Job est exponentiel (10s, 20s, 40s, 80s...) donc 4 tentatives
+  # couvrent largement ce délai, sans attendre indéfiniment en cas de vraie panne.
+  backoffLimit: 4
   template:
     spec:
       restartPolicy: OnFailure
