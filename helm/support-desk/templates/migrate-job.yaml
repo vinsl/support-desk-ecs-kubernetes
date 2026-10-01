@@ -7,9 +7,8 @@ metadata:
     # post-install (pas pre-install) : MySQL fait partie du même chart et n'existe pas encore
     # au moment d'un hook pre-install. pre-upgrade reste correct : MySQL existe déjà à ce stade.
     "helm.sh/hook": "post-install,pre-upgrade"
-    # TODO(human): quelle politique de suppression pour éviter de revivre l'incident Phase 3
-    # (Job resté bloqué en Failed, nettoyage manuel nécessaire) ? Indice : on veut que Helm
-    # supprime l'exécution précédente avant d'en créer une nouvelle.
+    # before-hook-creation : évite de revivre l'incident Phase 3 (Job resté bloqué en Failed,
+    # nettoyage manuel nécessaire) — Helm supprime l'exécution précédente avant d'en créer une neuve.
     "helm.sh/hook-delete-policy": "before-hook-creation"
 spec:
   # 2 ne laissait pas assez de temps à MySQL pour s'initialiser à froid sur une PVC neuve

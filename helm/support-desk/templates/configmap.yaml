@@ -7,6 +7,5 @@ metadata:
     {{- include "support-desk.labels" . | nindent 4 }}
 data:
   DB_HOST: {{ .Values.db.host | quote }}
-  # TODO(human): DB_PORT et DB_NAME, même pattern que DB_HOST juste au-dessus.
   DB_PORT: {{ .Values.db.port | quote }}
   DB_NAME: {{ .Values.db.name | quote }}
