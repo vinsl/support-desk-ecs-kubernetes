@@ -1,0 +1,13 @@
+# Overlay pour EKS. Squelette pour l'instant — complété en Phase 5 avec les vraies valeurs
+# (endpoint RDS, repo ECR, annotations ALB) une fois l'infra Terraform EKS provisionnée.
+# db.password n'est JAMAIS mis ici : il sera injecté via --set au moment du `helm install`,
+# depuis les outputs Terraform (cf. contrainte non négociable CLAUDE.md §4).
+
+mysql:
+  enabled: false  # RDS externe utilisé à la place du MySQL in-cluster
+
+ingress:
+  className: alb
+  # annotations ALB (target-type ip, etc.) ajoutées en Phase 5
+
+# image.repository / db.host seront écrasés en Phase 5 (ECR, endpoint RDS)

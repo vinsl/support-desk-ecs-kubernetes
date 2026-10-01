@@ -1,0 +1,46 @@
+# Valeurs par défaut du chart (orientées "local"). values-local.yaml et values-eks.yaml
+# ne surchargent que ce qui diffère.
+
+replicaCount: 2
+
+image:
+  repository: support-desk
+  tag: dev
+  pullPolicy: Never
+
+resources:
+  requests:
+    cpu: 128m
+    memory: 256Mi
+  limits:
+    cpu: 256m
+    memory: 512Mi
+
+probes:
+  path: /health
+  port: 5000
+  readiness:
+    initialDelaySeconds: 10
+    periodSeconds: 5
+  liveness:
+    initialDelaySeconds: 100
+    periodSeconds: 25
+
+db:
+  host: mysql          # écrasé par l'endpoint RDS sur EKS
+  port: "3306"
+  name: support_desk
+  user: support_desk
+  password: ""          # jamais en dur ici : values-local.yaml (fake) ou --set à l'install (EKS, outputs Terraform)
+  rootPassword: ""       # utilisé seulement si mysql.enabled=true
+
+mysql:
+  enabled: true          # false sur EKS : RDS externe utilisé à la place
+  image: "mysql:8.4"
+  storage: 1Gi
+
+ingress:
+  className: nginx       # "alb" sur EKS
+  annotations: {}
+
+namespace: support-desk

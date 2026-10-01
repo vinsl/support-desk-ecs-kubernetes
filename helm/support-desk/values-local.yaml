@@ -1,0 +1,4 @@
+# Overlay pour kind. Mots de passe factices, commit autorisé (jamais de vrais secrets ici).
+db:
+  password: "support_desk_password"
+  rootPassword: "local_root_password"
