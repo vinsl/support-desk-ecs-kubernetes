@@ -1,0 +1,6 @@
+apiVersion: v2
+name: support-desk
+description: Highly available support desk app (Flask + MySQL), packaged for Kubernetes
+type: application
+version: 0.1.0       # chart version: bump on any template/structure change
+appVersion: "1.0.2"  # application release this chart was built around (image tag is set in values)

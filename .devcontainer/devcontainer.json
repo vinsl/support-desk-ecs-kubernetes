@@ -5,7 +5,25 @@
     "context": ".."
   },
   "features": {
-    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+    "ghcr.io/devcontainers/features/kubectl-helm-minikube:1": { "minikube": "none" },
+    "ghcr.io/devcontainers-extra/features/kind:1": {},
+    "ghcr.io/devcontainers/features/node:1": {},
+    "ghcr.io/anthropics/devcontainer-features/claude-code:1": {}
   },
-  "postCreateCommand": "aws --version && terraform version && docker --version"
+  "hostRequirements": {
+    "cpus": 2,
+    "memory": "8gb"
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "anthropic.claude-code",
+        "ms-kubernetes-tools.vscode-kubernetes-tools",
+        "redhat.vscode-yaml",
+        "hashicorp.terraform"
+      ]
+    }
+  },
+  "postCreateCommand": "printf 'CLAUDE.md\\nPROGRESS.md\\n.claude/\\n' >> .git/info/exclude && aws --version && terraform version && docker --version"
 }

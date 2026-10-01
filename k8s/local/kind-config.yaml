@@ -1,0 +1,26 @@
+# kind cluster: 1 control-plane + 2 workers.
+#
+# The control-plane node gets:
+#   - hostPort 80 mapped to the node container's port 80, so traffic reaching the host
+#     (or the Codespaces-forwarded port 80) lands on this node.
+#   - the ingress-ready=true label, used to pin the ingress-nginx controller to this node.
+#     Note: the current upstream kind manifest for ingress-nginx does NOT set this
+#     nodeSelector itself, so it must be patched in after install (see README).
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: support-desk
+
+nodes:
+  - role: control-plane
+    kubeadmConfigPatches:
+      - |
+        kind: InitConfiguration
+        nodeRegistration:
+          kubeletExtraArgs:
+            node-labels: "ingress-ready=true"
+    extraPortMappings:
+      - containerPort: 80
+        hostPort: 80
+        protocol: TCP
+  - role: worker
+  - role: worker

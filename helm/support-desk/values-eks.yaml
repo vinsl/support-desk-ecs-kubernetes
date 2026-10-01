@@ -1,0 +1,16 @@
+# Overlay for Amazon EKS. NOT YET VALIDATED: the EKS infrastructure (Terraform root,
+# AWS Load Balancer Controller, ECR) has not been built. This file only sketches the
+# intended differences from the local setup.
+#
+# db.password must never be written here: pass it with --set at install time,
+# sourced from Terraform outputs.
+
+mysql:
+  enabled: false  # use Amazon RDS instead of the in-cluster MySQL
+
+ingress:
+  className: alb
+  # ALB annotations (e.g. target-type: ip) to be added with the Load Balancer Controller
+
+# To be set when EKS is provisioned: image.repository (ECR), image.tag (Git SHA),
+# image.pullPolicy (IfNotPresent), db.host (RDS endpoint).

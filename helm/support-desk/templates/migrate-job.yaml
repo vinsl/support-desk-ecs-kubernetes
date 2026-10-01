@@ -1,0 +1,30 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: support-desk-migrate
+  namespace: {{ .Values.namespace }}
+  annotations:
+    # post-install, not pre-install: pre-install hooks run before any non-hook resource of the
+    # release exists, including the in-cluster MySQL and the ConfigMap/Secret this Job reads.
+    # On upgrade those already exist, so pre-upgrade migrates before new Pods roll out.
+    "helm.sh/hook": "post-install,pre-upgrade"
+    # Delete the previous run before creating a new one, so a failed Job never blocks the next
+    # install/upgrade (Job specs are immutable).
+    "helm.sh/hook-delete-policy": "before-hook-creation"
+spec:
+  # MySQL needs ~45s to initialise on a fresh volume. Job retries back off exponentially
+  # (10s, 20s, 40s, 80s), so 4 retries cover that window without waiting forever on a real failure.
+  backoffLimit: 4
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: migrate
+          image: {{ printf "%s:%s" .Values.image.repository .Values.image.tag }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["python", "migrate.py"]
+          envFrom:
+            - configMapRef:
+                name: support-desk-config
+            - secretRef:
+                name: support-desk-secret

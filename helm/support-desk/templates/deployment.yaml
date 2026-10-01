@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: support-desk
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "support-desk.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "support-desk.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "support-desk.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: support-desk
+          image: {{ printf "%s:%s" .Values.image.repository .Values.image.tag }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.probes.port }}
+          envFrom:
+            - configMapRef:
+                name: support-desk-config
+            - secretRef:
+                name: support-desk-secret
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.probes.path }}
+              port: {{ .Values.probes.port }}
+            initialDelaySeconds: {{ .Values.probes.readiness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.readiness.periodSeconds }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.probes.path }}
+              port: {{ .Values.probes.port }}
+            initialDelaySeconds: {{ .Values.probes.liveness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.liveness.periodSeconds }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
