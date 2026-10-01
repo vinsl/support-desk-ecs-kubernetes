@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: support-desk-config
+data:
+  # TODO(human): quelle valeur pour DB_HOST ? Indice : le nom du Service headless MySQL
+  # qu'on va créer juste après (DNS interne, résolu dans le même namespace).
+  DB_HOST: "mysql"
+  DB_PORT: "3306"
+  DB_NAME: "support_desk"
