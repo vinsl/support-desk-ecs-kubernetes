@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: support-desk
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "support-desk.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "support-desk.selectorLabels" . | nindent 4 }}
+  ports:
+    - port: 80
+      targetPort: {{ .Values.probes.port }}
