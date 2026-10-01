@@ -1,0 +1,26 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: support-desk-migrate
+spec:
+  backoffLimit: 2 # migrate.py est idempotent (CREATE TABLE IF NOT EXISTS), 2 tentatives suffisent
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: migrate
+          image: support-desk:dev
+          imagePullPolicy: Never
+          # TODO(human): quelle commande exécuter pour lancer la migration ?
+          # Indice : regarde comment on lance manuellement migrate.py (app/migrate.py), pas besoin
+          # du serveur Gunicorn ici, juste l'interpréteur Python et le script.
+          command: ["python", "migrate.py"]
+          # TODO(human): comment injecter DB_HOST/DB_PORT/DB_NAME/DB_USER/DB_PASSWORD dans ce
+          # conteneur ? Cette fois les noms de clés du ConfigMap/Secret correspondent exactement
+          # à ceux que db.py attend (os.getenv) : pas besoin de les référencer un par un comme
+          # pour MySQL. Indice : cherche le mot-clé qui importe TOUTES les clés d'un coup.
+          envFrom:
+            - configMapRef:
+                name: support-desk-config
+            - secretRef:
+                name: support-desk-secret
