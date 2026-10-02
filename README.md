@@ -1,6 +1,6 @@
 <a href="https://www.linkedin.com/in/vincent-lucas-483b29295/" target="_blank">LinkedIn</a>
 
-# Highly Available Support Desk on AWS
+# Highly Available Support Desk: AWS ECS Fargate & Kubernetes (Helm)
 
 A production-style support ticket web application deployed on AWS with Docker, Terraform, Amazon ECS Fargate, an Application Load Balancer, and Amazon RDS for MySQL. The same application is also packaged as a Helm chart and runs on a local multi-node Kubernetes cluster (kind).
 
@@ -386,7 +386,7 @@ flowchart TB
 | `values-local.yaml` | Fake local credentials only (the same ones as `docker-compose.yml`). |
 | `values-eks.yaml` | Sketch of the EKS differences (external database, `alb` ingress class). Not validated. Real credentials must be passed with `--set` at install time, never committed. |
 | `templates/mysql-*.yaml` | Rendered only when `mysql.enabled` is true (`{{- if }}`), so a cloud install would deploy no database Pod. |
-| `templates/migrate-job.yaml` | Runs `python migrate.py` (idempotent `CREATE TABLE IF NOT EXISTS`) as a `post-install,pre-upgrade` hook. |
+| `templates/migrate-job.yaml` | Runs `python migrate.py` (idempotent `CREATE TABLE IF NOT EXISTS`) as a `post-install,pre-upgrade` hook. An init container first waits for the database port to accept connections. |
 
 ### Run it
 
@@ -426,6 +426,15 @@ Prerequisites: Docker, kind, kubectl and Helm (all provided by the devcontainer)
 
 5. Open the application: `http://localhost` on a local machine, or the forwarded port 80 URL (`https://<codespace>-80.app.github.dev`) in the Codespaces **Ports** tab.
 
+6. Optional, to try releases and rollbacks. Always pass the values file again on upgrade, otherwise the database password falls back to the empty default:
+
+   ```bash
+   helm upgrade support-desk helm/support-desk -f helm/support-desk/values-local.yaml \
+     --set replicaCount=3 -n support-desk
+   helm history support-desk -n support-desk
+   helm rollback support-desk 1 -n support-desk   # creates a new revision that restores revision 1
+   ```
+
 ### Validation performed
 
 These checks were run by hand on the kind cluster:
@@ -435,7 +444,8 @@ These checks were run by hand on the kind cluster:
 - **Service discovery**: a throwaway Pod reaches the application at `http://support-desk/health` through cluster DNS.
 - **Rolling update**: changing the Pod template (adding probes, resources and DB configuration) replaced the Pods with no downtime. New Pods received traffic only after their readiness probe passed.
 - **Persistence**: tickets created through the Service survived deleting both application Pods at once, because the data lives in MySQL's PersistentVolumeClaim.
-- **One-command install**: deleting the whole namespace and running `helm install` once recreated MySQL, the application, the Service and the Ingress, and ran the migration hook to completion (`STATUS: deployed`).
+- **One-command install**: on a freshly created cluster with empty image caches (MySQL's image was pulled during the install), a single `helm install` created MySQL, the application, the Service and the Ingress, and ran the migration hook to completion (revision 1, `Install complete`). The migration Pod waited about 70 seconds for MySQL before running.
+- **Helm upgrade and rollback**: `helm upgrade --set replicaCount=3` went from 2 to 3 application Pods (revision 2, and the migration hook ran again before the rollout). `helm rollback support-desk 1` returned to 2 Pods and recorded revision 3, `Rollback to 1`: a rollback adds a revision instead of rewriting history, and `helm history` shows all three.
 - **Ingress**: the application is reachable in a browser through ingress-nginx on port 80.
 
 ### Issues found and fixed
@@ -444,7 +454,7 @@ These showed up only when deploying for real. `helm lint` and `helm template` di
 
 - **Ingress controller on the wrong node.** The upstream kind manifest for ingress-nginx only selects `kubernetes.io/os: linux`. The controller landed on a worker, while port 80 is mapped on the control-plane node, so requests got an empty response. Found with `docker port` and `kubectl get pods -o wide`, then fixed by patching the `nodeSelector` (step 3 above).
 - **Migration hook timing.** A `pre-install` hook runs before any regular resource of the release exists, including the in-cluster MySQL and the ConfigMap/Secret the Job reads. The hook failed with `configmap "support-desk-config" not found`. It now runs as `post-install,pre-upgrade`.
-- **Database cold start.** On a fresh volume, MySQL needs about 45 seconds before it accepts connections. Two retries ran out before that. `backoffLimit: 4` covers the window thanks to the exponential retry delay. `hook-delete-policy: before-hook-creation` removes a failed previous run so it never blocks the next install.
+- **Database cold start.** A first fix raised the Job's `backoffLimit` to 4, based on a ~45 second MySQL startup measured with the image already cached. It did not hold: on a brand-new cluster, pulling the MySQL image (about 30 seconds) plus first-boot initialisation took longer than the Job's retries, and the install ended `failed`. This only showed up when the documented steps were replayed from scratch. The migration Job now has an init container that waits until the database port accepts connections (up to about 5 minutes), so no retry budget has to guess the startup time. `hook-delete-policy: before-hook-creation` removes a failed previous run so it never blocks the next install.
 - **Template delimiters inside comments.** Helm renders a file as a Go template before parsing it as YAML, so `{{ }}` inside a `#` comment is still evaluated and can break the chart.
 - **No ordering between resources.** Applying all manifests at once started the migration before MySQL was ready. Kubernetes has no equivalent of Terraform's `depends_on`; each workload has to tolerate dependencies that are not ready yet (retries, readiness probes).
 
