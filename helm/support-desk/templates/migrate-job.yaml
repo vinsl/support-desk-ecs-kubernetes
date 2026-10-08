@@ -12,12 +12,34 @@ metadata:
     # install/upgrade (Job specs are immutable).
     "helm.sh/hook-delete-policy": "before-hook-creation"
 spec:
-  # MySQL needs ~45s to initialise on a fresh volume. Job retries back off exponentially
-  # (10s, 20s, 40s, 80s), so 4 retries cover that window without waiting forever on a real failure.
+  # Retries only cover transient errors: waiting for the database is the init container's job.
   backoffLimit: 4
   template:
     spec:
       restartPolicy: OnFailure
+      initContainers:
+        # On a cold cluster MySQL needs 100s+ (image pull plus first-boot initialisation), longer
+        # than any reasonable retry budget on the Job itself. Block here until the database port
+        # accepts connections (it only opens once initialisation is finished), for up to ~5 minutes.
+        - name: wait-for-db
+          image: {{ printf "%s:%s" .Values.image.repository .Values.image.tag }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - python
+            - -c
+            - |
+              import os, socket, sys, time
+              host, port = os.environ["DB_HOST"], int(os.environ["DB_PORT"])
+              for _ in range(60):
+                  try:
+                      socket.create_connection((host, port), timeout=2).close()
+                      sys.exit(0)
+                  except OSError:
+                      time.sleep(5)
+              sys.exit("database not reachable after about 5 minutes")
+          envFrom:
+            - configMapRef:
+                name: support-desk-config
       containers:
         - name: migrate
           image: {{ printf "%s:%s" .Values.image.repository .Values.image.tag }}
